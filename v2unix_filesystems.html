@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Custom Shell - Live Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .demo-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .demo-section {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .terminal {
+            background: #1a1a1a;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            height: 500px;
+        }
+
+        .terminal-header {
+            background: #333;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .dot-red { background: #ff5f56; }
+        .dot-yellow { background: #ffbd2e; }
+        .dot-green { background: #27ca3f; }
+
+        .terminal-title {
+            color: #ccc;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+
+        .terminal-body {
+            padding: 20px;
+            height: calc(100% - 52px);
+            overflow-y: auto;
+            color: #00ff00;
+            background: #000;
+        }
+
+        .output-line {
+            margin-bottom: 5px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .prompt {
+            color: #00ff00;
+        }
+
+        .command {
+            color: #ffffff;
+        }
+
+        .error {
+            color: #ff4444;
+        }
+
+        .input-line {
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .terminal-input {
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            font-family: inherit;
+            font-size: 14px;
+            flex: 1;
+            outline: none;
+            margin-left: 5px;
+        }
+
+        .code-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .code-header {
+            background: #f8f9fa;
+            margin: -20px -20px 20px -20px;
+            padding: 15px 20px;
+            border-radius: 10px 10px 0 0;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .code-header h3 {
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .code-header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 15px;
+            font-size: 14px;
+            overflow-x: auto;
+            margin-bottom: 15px;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .feature-card h4 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .feature-card p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .cursor {
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 My Custom Shell</h1>
+            <p>Interactive command line interpreter built from scratch</p>
+        </div>
+
+        <div class="demo-section">
+            <div class="terminal">
+                <div class="terminal-header">
+                    <div class="terminal-dot dot-red"></div>
+                    <div class="terminal-dot dot-yellow"></div>
+                    <div class="terminal-dot dot-green"></div>
+                    <div class="terminal-title">MyShell - Live Demo</div>
+                </div>
+                <div class="terminal-body" id="terminal">
+                    <div class="output-line"><span class="prompt">=== Welcome to My Custom Shell! ===</span></div>
+                    <div class="output-line"><span class="prompt">Try commands: help, ls, pwd, cd, date, whoami, clear</span></div>
+                    <div class="output-line"><span class="prompt">Type 'demo' to see a cool demo!</span></div>
+                    <div class="output-line"></div>
+                    <div class="input-line">
+                        <span class="prompt">myshell:~$</span>
+                        <input type="text" class="terminal-input" id="commandInput" autocomplete="off" spellcheck="false">
+                        <span class="cursor">█</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="code-section">
+                <div class="code-header">
+                    <h3>How It Works</h3>
+                    <p>Core shell implementation in C</p>
+                </div>
+                
+                <h4>Main Loop:</h4>
+                <div class="code-block">while (1) {
+    print_prompt();
+    read_command();
+    if (command == "exit") break;
+    parse_command();
+    execute_command();
+}</div>
+
+                <h4>Command Execution:</h4>
+                <div class="code-block">pid_t pid = fork();
+if (pid == 0) {
+    // Child process
+    execvp(args[0], args);
+} else {
+    // Parent waits
+    waitpid(pid, &status, 0);
+}</div>
+
+                <h4>Features Implemented:</h4>
+                <ul>
+                    <li>✅ Command parsing & execution</li>
+                    <li>✅ Built-in commands (cd, pwd, exit)</li>
+                    <li>✅ Process management (fork/exec)</li>
+                    <li>✅ Error handling</li>
+                    <li>🔄 Pipes & redirection (in progress)</li>
+                    <li>🔄 Background processes (in progress)</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="feature-grid">
+            <div class="feature-card">
+                <h4>🔧 Built from Scratch</h4>
+                <p>Custom implementation using system calls like fork(), exec(), and wait()</p>
+            </div>
+            <div class="feature-card">
+                <h4>⚡ Fast & Lightweight</h4>
+                <p>Minimal overhead with efficient command parsing and execution</p>
+            </div>
+            <div class="feature-card">
+                <h4>🛠️ Extensible</h4>
+                <p>Modular design allows easy addition of new features and commands</p>
+            </div>
+            <div class="feature-card">
+                <h4>🎯 Educational</h4>
+                <p>Great for learning operating system concepts and system programming</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class WebShell {
+            constructor() {
+                this.currentPath = '/home/user';
+                this.fileSystem = {
+                    '/': {
+                        'home': {
+                            'user': {
+                                'documents': {
+                                    'readme.txt': 'Welcome to my shell!',
+                                    'project.c': '#include <stdio.h>\nint main() { return 0; }'
+                                },
+                                'shell.c': 'My custom shell source code'
+                            }
+                        },
+                        'bin': {},
+                        'etc': {}
+                    }
+                };
+                this.commandHistory = [];
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                const input = document.getElementById('commandInput');
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        this.executeCommand(input.value.trim());
+                        input.value = '';
+                    }
+                });
+                input.focus();
+            }
+
+            addOutput(text, className = '') {
+                const terminal = document.getElementById('terminal');
+                const inputLine = terminal.querySelector('.input-line');
+                const outputDiv = document.createElement('div');
+                outputDiv.className = `output-line ${className}`;
+                outputDiv.textContent = text;
+                terminal.insertBefore(outputDiv, inputLine);
+                terminal.scrollTop = terminal.scrollHeight;
+            }
+
+            executeCommand(cmd) {
+                if (!cmd) return;
+
+                // Show the command that was typed
+                this.addOutput(`myshell:${this.currentPath}$ ${cmd}`, 'command');
+                this.commandHistory.push(cmd);
+
+                const [command, ...args] = cmd.split(' ');
+
+                switch (command.toLowerCase()) {
+                    case 'help':
+                        this.addOutput('Available commands:');
+                        this.addOutput('  help     - Show this help message');
+                        this.addOutput('  ls       - List directory contents');
+                        this.addOutput('  pwd      - Print working directory');
+                        this.addOutput('  cd       - Change directory');
+                        this.addOutput('  date     - Show current date');
+                        this.addOutput('  whoami   - Show current user');
+                        this.addOutput('  clear    - Clear terminal');
+                        this.addOutput('  demo     - Run a cool demo');
+                        this.addOutput('  exit     - Exit shell');
+                        break;
+
+                    case 'ls':
+                        this.listDirectory();
+                        break;
+
+                    case 'pwd':
+                        this.addOutput(this.currentPath);
+                        break;
+
+                    case 'cd':
+                        this.changeDirectory(args[0] || '/home/user');
+                        break;
+
+                    case 'date':
+                        this.addOutput(new Date().toString());
+                        break;
+
+                    case 'whoami':
+                        this.addOutput('user');
+                        break;
+
+                    case 'clear':
+                        this.clearTerminal();
+                        break;
+
+                    case 'demo':
+                        this.runDemo();
+                        break;
+
+                    case 'exit':
+                        this.addOutput('Thanks for trying my shell! 👋');
+                        this.addOutput('In a real shell, this would terminate the process.');
+                        break;
+
+                    default:
+                        this.addOutput(`Command not found: ${command}`, 'error');
+                        this.addOutput('Type "help" for available commands');
+                        break;
+                }
+
+                this.addOutput(''); // Empty line for spacing
+            }
+
+            listDirectory() {
+                const pathParts = this.currentPath.split('/').filter(p => p);
+                let current = this.fileSystem['/'];
+                
+                for (const part of pathParts) {
+                    current = current[part];
+                    if (!current) {
+                        this.addOutput('Directory not found', 'error');
+                        return;
+                    }
+                }
+
+                const items = Object.keys(current);
+                if (items.length === 0) {
+                    this.addOutput('Directory is empty');
+                } else {
+                    items.forEach(item => {
+                        const isDir = typeof current[item] === 'object' && !Array.isArray(current[item]);
+                        this.addOutput(`${isDir ? 'd' : '-'}rw-r--r-- 1 user user ${isDir ? '4096' : '1024'} ${item}`);
+                    });
+                }
+            }
+
+            changeDirectory(newPath) {
+                if (newPath === '..') {
+                    const parts = this.currentPath.split('/').filter(p => p);
+                    if (parts.length > 2) { // Don't go above /home/user
+                        parts.pop();
+                        this.currentPath = '/' + parts.join('/');
+                    }
+                } else if (newPath.startsWith('/')) {
+                    this.currentPath = newPath;
+                } else {
+                    // Relative path
+                    if (this.currentPath === '/') {
+                        this.currentPath = '/' + newPath;
+                    } else {
+                        this.currentPath = this.currentPath + '/' + newPath;
+                    }
+                }
+                
+                // Update prompt
+                const inputLine = document.querySelector('.input-line .prompt');
+                inputLine.textContent = `myshell:${this.currentPath}$`;
+            }
+
+            clearTerminal() {
+                const terminal = document.getElementById('terminal');
+                const inputLine = terminal.querySelector('.input-line');
+                terminal.innerHTML = '';
+                terminal.appendChild(inputLine);
+            }
+
+            async runDemo() {
+                const commands = [
+                    'Demonstrating shell capabilities...',
+                    'Creating process...',
+                    'fork() -> PID: 1234',
+                    'exec("/bin/ls") -> SUCCESS',
+                    'Process completed with exit code 0',
+                    'Memory cleaned up',
+                    'Shell ready for next command'
+                ];
+
+                for (let i = 0; i < commands.length; i++) {
+                    await new Promise(resolve => setTimeout(resolve, 800));
+                    this.addOutput(`[DEMO] ${commands[i]}`);
+                }
+            }
+        }
+
+        // Initialize the shell when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new WebShell();
+        });
+    </script>
+</body>
+</html>
