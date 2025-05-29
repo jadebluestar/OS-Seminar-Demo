@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unix File System Structure - Seminar</title>
+    <link rel="icon" type="image/png" href="UNIX-Emblem-500x281.png">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .slide {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            opacity: 0;
+            transform: translateY(30px);
+            animation: slideIn 0.8s ease forwards;
+        }
+        
+        @keyframes slideIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        h1 {
+            color: #1e3c72;
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        h2 {
+            color: #2a5298;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #2a5298;
+            padding-bottom: 10px;
+        }
+        
+        h3 {
+            color: #1e3c72;
+            font-size: 1.3em;
+            margin: 20px 0 10px;
+        }
+        
+        .fs-tree {
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+        
+        .code-demo {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            position: relative;
+        }
+        
+        .code-demo::before {
+            content: "💻 Live Demo";
+            position: absolute;
+            top: -10px;
+            left: 20px;
+            background: #4299e1;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 0.8em;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            margin: 10px 5px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+            background: linear-gradient(45deg, #764ba2, #667eea);
+        }
+        
+        .output {
+            background: #1a202c;
+            color: #68d391;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #4a5568;
+        }
+        
+        .directory-structure {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .dir-box {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        
+        .dir-box h4 {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .dir-box .icon {
+            margin-right: 10px;
+            font-size: 1.5em;
+        }
+        
+        .highlight {
+            background: #ffd700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #333;
+        }
+        
+        .interactive-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .feature-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff87, #60efff);
+            border-radius: 3px;
+            width: 0%;
+            transition: width 2s ease;
+        }
+
+        .command-input {
+            background: #2d3748;
+            border: 2px solid #4a5568;
+            color: #e2e8f0;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: monospace;
+            margin: 10px 5px;
+            width: 200px;
+        }
+
+        .command-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Title Slide -->
+        <div class="slide">
+            <h1>🗂️ Unix File System Structure</h1>
+            <div style="text-align: center; margin: 30px 0;">
+                <div style="font-size: 1.2em; color: #666;">Operating Systems Seminar</div>
+                <div style="margin-top: 10px; font-size: 1.1em;">Interactive Demonstration & Code Implementation</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressBar"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Overview -->
+        <div class="slide">
+            <h2>📋 Overview</h2>
+            <p>The Unix file system is a hierarchical structure that organizes files and directories in a tree-like format. Understanding this structure is crucial for system administration, programming, and efficient file management.</p>
+            
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3>🌳 Hierarchical Structure</h3>
+                    <p>Everything starts from root (/)</p>
+                </div>
+                <div class="feature-card">
+                    <h3>📁 Directory Types</h3>
+                    <p>System, user, and special directories</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🔗 File Types</h3>
+                    <p>Regular, directory, symbolic links, devices</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🔒 Permissions</h3>
+                    <p>Read, write, execute for user/group/others</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- File System Tree -->
+        <div class="slide">
+            <h2>🌲 Unix File System Tree Structure</h2>
+            <div class="fs-tree">
+/ (root)<br>
+├── bin/          # Essential user binaries<br>
+├── boot/         # Boot loader files<br>
+├── dev/          # Device files<br>
+├── etc/          # System configuration files<br>
+├── home/         # User home directories<br>
+│   ├── user1/<br>
+│   └── user2/<br>
+├── lib/          # Shared libraries<br>
+├── media/        # Removable media mount points<br>
+├── mnt/          # Temporary mount points<br>
+├── opt/          # Optional software packages<br>
+├── proc/         # Process information (virtual)<br>
+├── root/         # Root user's home directory<br>
+├── sbin/         # System binaries<br>
+├── tmp/          # Temporary files<br>
+├── usr/          # User utilities and applications<br>
+│   ├── bin/      # User binaries<br>
+│   ├── lib/      # User libraries<br>
+│   └── share/    # Architecture-independent data<br>
+└── var/          # Variable data files<br>
+    ├── log/      # Log files<br>
+    └── tmp/      # Variable temporary files<br>
+            </div>
+        </div>
+
+        <!-- Directory Details -->
+        <div class="slide">
+            <h2>📂 Key Directories Explained</h2>
+            <div class="directory-structure">
+                <div class="dir-box">
+                    <h4><span class="icon">🏠</span>/root & /home</h4>
+                    <p><strong>/root:</strong> Super user's home<br>
+                    <strong>/home:</strong> Regular user directories<br>
+                    Contains personal files, configs</p>
+                </div>
+                <div class="dir-box">
+                    <h4><span class="icon">⚙️</span>/etc</h4>
+                    <p>System configuration files<br>
+                    - passwd, shadow (user info)<br>
+                    - fstab (file systems)<br>
+                    - hosts (network hosts)</p>
+                </div>
+                <div class="dir-box">
+                    <h4><span class="icon">🔧</span>/bin & /sbin</h4>
+                    <p><strong>/bin:</strong> User commands (ls, cp, mv)<br>
+                    <strong>/sbin:</strong> System admin commands<br>
+                    Essential for system operation</p>
+                </div>
+                <div class="dir-box">
+                    <h4><span class="icon">💾</span>/dev</h4>
+                    <p>Device files<br>
+                    - /dev/null (null device)<br>
+                    - /dev/zero (zero device)<br>
+                    - /dev/sda1 (disk partitions)</p>
+                </div>
+                <div class="dir-box">
+                    <h4><span class="icon">🔄</span>/proc</h4>
+                    <p>Virtual file system<br>
+                    Process and kernel info<br>
+                    - /proc/cpuinfo<br>
+                    - /proc/meminfo</p>
+                </div>
+                <div class="dir-box">
+                    <h4><span class="icon">📊</span>/var</h4>
+                    <p>Variable data files<br>
+                    - Logs (/var/log)<br>
+                    - Spool files<br>
+                    - Temporary files</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Interactive Demo Section -->
+        <div class="slide interactive-section">
+            <h2>💻 Interactive File System Explorer</h2>
+            <p>Let's explore the file system with our custom implementation!</p>
+            
+            <div class="code-demo">
+                <h3>File System Navigator - Current Path: <span id="currentPath">/</span></h3>
+                <button onclick="simulateLS()">📁 List Directory (ls -la)</button>
+                <button onclick="simulateFind()">🔍 Find Files</button>
+                <button onclick="simulateTree()">🌳 Show Tree Structure</button>
+                <button onclick="showFileInfo()">ℹ️ File Information</button>
+                <button onclick="simulatePermissions()">🔐 Check Permissions</button>
+                <br><br>
+                <input type="text" class="command-input" id="pathInput" placeholder="Enter path (e.g., /home)" />
+                <button onclick="changeDirectory()">📂 Change Directory</button>
+                <input type="text" class="command-input" id="findInput" placeholder="Search pattern (e.g., *.log)" />
+                <button onclick="customFind()">🔎 Custom Find</button>
+                
+                <div class="output" id="output">Welcome to the Unix File System Explorer!
+Current directory: /
+Type any command above to explore the file system structure.</div>
+            </div>
+        </div>
+
+        <!-- File Types -->
+        <div class="slide">
+            <h2>📄 Unix File Types</h2>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>- Regular Files</h4>
+                    <p>Text files, binaries, data files</p>
+                </div>
+                <div class="feature-card">
+                    <h4>d Directories</h4>
+                    <p>Containers for other files</p>
+                </div>
+                <div class="feature-card">
+                    <h4>l Symbolic Links</h4>
+                    <p>Pointers to other files</p>
+                </div>
+                <div class="feature-card">
+                    <h4>c Character Devices</h4>
+                    <p>Keyboards, terminals</p>
+                </div>
+                <div class="feature-card">
+                    <h4>b Block Devices</h4>
+                    <p>Hard drives, USB drives</p>
+                </div>
+                <div class="feature-card">
+                    <h4>p Named Pipes</h4>
+                    <p>Inter-process communication</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Permissions -->
+        <div class="slide">
+            <h2>🔐 File Permissions System</h2>
+            <p>Unix uses a 3-bit permission system for three categories of users:</p>
+            
+            <div class="fs-tree">
+Permission Format: rwxrwxrwx<br>
+                   |||||||└── Others execute<br>
+                   ||||||└─── Others write  <br>
+                   |||||└──── Others read<br>
+                   ||||└───── Group execute<br>
+                   |||└────── Group write<br>
+                   ||└─────── Group read<br>
+                   |└──────── Owner execute<br>
+                   └───────── Owner write<br>
+                            └─ Owner read<br>
+
+Examples:
+-rw-r--r--  (644) Regular file: owner read/write, group/others read
+drwxr-xr-x  (755) Directory: owner full access, group/others read/execute
+-rwxr-xr-x  (755) Executable: owner full access, group/others read/execute
+            </div>
+            
+            <div class="code-demo">
+                <h3>Permission Calculator</h3>
+                <input type="text" class="command-input" id="permInput" placeholder="Enter octal (e.g., 755)" />
+                <button onclick="calculatePermissions()">🧮 Calculate Permissions</button>
+                <button onclick="showPermissionExamples()">📖 Show Examples</button>
+                <div class="output" id="permOutput">Enter an octal permission value (like 755, 644, etc.) to see the breakdown!</div>
+            </div>
+        </div>
+
+        <!-- Code Implementation -->
+        <div class="slide">
+            <h2>⚡ Code Implementation Demo</h2>
+            <p>Here's our custom file system explorer implementation:</p>
+            
+            <div class="code-demo">
+                <button onclick="window.location.href='script.html'">📄 Show Complete Code</button>
+                <button onclick="runFileSystemDemo()">🚀 Run Full Demo</button>
+                <button onclick="showClassStructure()">🏗️ Show Class Structure</button>
+                <button onclick="demonstrateAPIs()">🔧 Demonstrate APIs</button>
+                <div class="output" id="codeOutput">Click any button above to explore the implementation!</div>
+            </div>
+        </div>
+
+        <!-- Conclusion -->
+        <div class="slide">
+            <h2>🎯 Key Takeaways</h2>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>🌳 Hierarchical Structure</h4>
+                    <p>Everything stems from root (/), creating a logical tree organization</p>
+                </div>
+                <div class="feature-card">
+                    <h4>🔒 Security Model</h4>
+                    <p>Robust permission system controls access at file level</p>
+                </div>
+                <div class="feature-card">
+                    <h4>🔧 System Organization</h4>
+                    <p>Standardized directory layout aids administration and development</p>
+                </div>
+                <div class="feature-card">
+                    <h4>💾 Everything is a File</h4>
+                    <p>Devices, processes, and data all represented as files</p>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 30px;">
+                <h3>Thank you for your attention! 🎉</h3>
+                <p>© 2025 fiona</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Complete Unix File System Implementation
+        class UnixFileSystem {
+            constructor() {
+                this.currentPath = '/';
+                this.fileSystem = {
+                    '/': {
+                        type: 'directory',
+                        permissions: 0o755,
+                        owner: 'root',
+                        group: 'root',
+                        size: 4096,
+                        created: '2024-05-25 10:30:00',
+                        children: {
+                            'bin': {
+                                type: 'directory',
+                                permissions: 0o755,
+                                owner: 'root',
+                                group: 'root',
+                                size: 4096,
+                                children: {
+                                    'ls': { type: 'file', permissions: 0o755, size: 142144 },
+                                    'cp': { type: 'file', permissions: 0o755, size: 151024 },
+                                    'mv': { type: 'file', permissions: 0o755, size: 146432 },
+                                    'cat': { type: 'file', permissions: 0o755, size: 52224 },
+                                    'grep': { type: 'file', permissions: 0o755, size: 232448 },
+                                    'bash': { type: 'file', permissions: 0o755, size: 1037528 }
+                                }
+                            },
+                            'etc': {
+                                type: 'directory',
+                                permissions: 0o755,
+                                children: {
+                                    'passwd': { type: 'file', permissions: 0o644, size: 2341 },
+                                    'shadow': { type: 'file', permissions: 0o640, size: 1234 },
+                                    'hosts': { type: 'file', permissions: 0o644, size: 411 },
+                                    'fstab': { type: 'file', permissions: 0o644, size: 846 },
+                                    'hostname': { type: 'file', permissions: 0o644, size: 12 }
+                                }
+                            },
+                            'home': {
+                                type: 'directory',
+                                permissions: 0o755,
+                                children: {
+                                    'user1': {
+                                        type: 'directory',
+                                        permissions: 0o700,
+                                        owner: 'user1',
+                                        children: {
+                                            'Documents': { type: 'directory', permissions: 0o755 },
+                                            'Downloads': { type: 'directory', permissions: 0o755 },
+                                            'Desktop': { type: 'directory', permissions: 0o755 },
+                                            '.bashrc': { type: 'file', permissions: 0o644, size: 3526 },
+                                            'notes.txt': { type: 'file', permissions: 0o644, size: 1024 }
+                                        }
+                                    },
+                                    'user2': {
+                                        type: 'directory',
+                                        permissions: 0o700,
+                                        owner: 'user2',
+                                        children: {
+                                            'projects': { type: 'directory', permissions: 0o755 },
+                                            'music': { type: 'directory', permissions: 0o755 },
+                                            'photos': { type: 'directory', permissions: 0o755 }
+                                        }
+                                    },
+                                    'admin': {
+                                        type: 'directory',
+                                        permissions: 0o700,
+                                        owner: 'admin',
+                                        children: {
+                                            'scripts': { type: 'directory', permissions: 0o755 },
+                                            'configs': { type: 'directory', permissions: 0o755 }
+                                        }
+                                    }
+                                }
+                            },
+                            'var': {
+                                type: 'directory',
+                                permissions: 0o755,
+                                children: {
+                                    'log': {
+                                        type: 'directory',
+                                        permissions: 0o755,
+                                        children: {
+                                            'system.log': { type: 'file', permissions: 0o644, size: 15420 },
+                                            'error.log': { type: 'file', permissions: 0o644, size: 8934 },
+                                            'access.log': { type: 'file', permissions: 0o644, size: 45231 },
+                                            'auth.log': { type: 'file', permissions: 0o640, size: 12045 }
+                                        }
+                                    },
+                                    'tmp': { type: 'directory', permissions: 0o1777 },
+                                    'spool': { type: 'directory', permissions: 0o755 }
+                                }
+                            },
+                            'dev': {
+                                type: 'directory',
+                                permissions: 0o755,
+                                children: {
+                                    'null': { type: 'device', permissions: 0o666, device_type: 'character' },
+                                    'zero': { type: 'device', permissions: 0o666, device_type: 'character' },
+                                    'sda1': { type: 'device', permissions: 0o660, device_type: 'block' },
+                                    'tty1': { type: 'device', permissions: 0o620, device_type: 'character' },
+                                    'random': { type: 'device', permissions: 0o666, device_type: 'character' }
+                                }
+                            },
+                            'proc': {
+                                type: 'directory',
+                                permissions: 0o555,
+                                children: {
+                                    'cpuinfo': { type: 'file', permissions: 0o444, size: 0, virtual: true },
+                                    'meminfo': { type: 'file', permissions: 0o444, size: 0, virtual: true },
+                                    'version': { type: 'file', permissions: 0o444, size: 0, virtual: true },
+                                    '1234': { type: 'directory', permissions: 0o555 },
+                                    '5678': { type: 'directory', permissions: 0o555 }
+                                }
+                            },
+                            'tmp': {
+                                type: 'directory',
+                                permissions: 0o1777,
+                                children: {}
+                            },
+                            'usr': {
+                                type: 'directory',
+                                permissions: 0o755,
+                                children: {
+                                    'bin': { type: 'directory', permissions: 0o755, children: {} },
+                                    'lib': { type: 'directory', permissions: 0o755, children: {} },
+                                    'share': { type: 'directory', permissions: 0o755, children: {} },
+                                    'local': { type: 'directory', permissions: 0o755, children: {} }
+                                }
+                            }
+                        }
+                    }
+                };
+            }
+
+            getNode(path) {
+                if (path === '/') return this.fileSystem['/'];
+                
+                const parts = path.split('/').filter(p => p);
+                let current = this.fileSystem['/'];
+                
+                for (let part of parts) {
+                    if (!current.children || !current.children[part]) {
+                        return null;
+                    }
+                    current = current.children[part];
+                }
+                return current;
+            }
+
+            formatPermissions(octal) {
+                const perms = ['---', '--x', '-w-', '-wx', 'r--', 'r-x', 'rw-', 'rwx'];
+                const owner = perms[(octal >> 6) & 7];
+                const group = perms[(octal >> 3) & 7];
+                const other = perms[octal & 7];
+                return owner + group + other;
+            }
+
+            listDirectory(path = this.currentPath, showAll = true) {
+                const node = this.getNode(path);
+                if (!node || node.type !== 'directory') {
+                    return `ls: cannot access '${path}': No such file or directory`;
+                }
+
+                let result = `$ ls -la ${path}\ntotal ${Object.keys(node.children || {}).length + 2}\n`;
+                
+                if (showAll) {
+                    result += `drwxr-xr-x  2 root root 4096 May 25 10:30 .\n`;
+                    result += `drwxr-xr-x  2 root root 4096 May 25 10:30 ..\n`;
+                }
+
+                for (let [name, child] of Object.entries(node.children || {})) {
+                    const type = child.type === 'directory' ? 'd' : 
+                                child.type === 'device' && child.device_type === 'character' ? 'c' :
+                                child.type === 'device' && child.device_type === 'block' ? 'b' : '-';
+                    const perms = this.formatPermissions(child.permissions || 0o644);
+                    const owner = child.owner || 'root';
+                    const group = child.group || 'root';
+                    const size = child.size || 4096;
+                    const date = child.created || 'May 25 10:30';
+                    
+                    result += `${type}${perms}  1 ${owner.padEnd(8)} ${group.padEnd(8)} ${size.toString().padStart(8)} ${date} ${name}\n`;
+                }
+
+                return result;
+            }
+
+            changeDirectory(newPath) {
+                const resolvedPath = newPath.startsWith('/') ? newPath : 
+                    this.currentPath === '/' ? `/${newPath}` : `${this.currentPath}/${newPath}`;
+                
+                const node = this.getNode(resolvedPath);
+                if (!node) {
+                    return `cd: ${newPath}: No such file or directory`;
+                }
+                if (node.type !== 'directory') {
+                    return `cd: ${newPath}: Not a directory`;
+                }
+
+                this.currentPath = resolvedPath;
+                return `Changed directory to: ${this.currentPath}`;
+            }
+
+            findFiles(pattern, startPath = '/') {
+                const results = [];
+                const regex = new RegExp(pattern.replace(/\*/g, '.*').replace(/\?/g, '.'));
+
+                const search = (path, node) => {
+                    const basename = path.split('/').pop() || '/';
+                    if (regex.test(basename)) {
+                        results.push(path);
+                    }
+
+                    if (node.type === 'directory' && node.children) {
+                        for (let [name, child] of Object.entries(node.children)) {
+                            const childPath = path === '/' ? `/${name}` : `${path}/${name}`;
+                            search(childPath, child);
+                        }
+                    }
+                };
+
+                const startNode = this.getNode(startPath);
+                if (startNode) {
+                    search(startPath, startNode);
+                }
+
+                return results;
+            }
+
+            getFileInfo(path) {
+                const node = this.getNode(path);
+                if (!node) {
+                    return `stat: cannot stat '${path}': No such file or directory`;
+                }
+
+                const type = node.type === 'directory' ? 'directory' :
+                            node.type === 'device' ? `${node.device_type} device` : 'regular file';
+                const perms = this.formatPermissions(node.permissions || 0o644);
+                const octal = (node.permissions || 0o644).toString(8).padStart(4, '0');
+
+                return `File: ${path}
+Size: ${node.size || 0}      Type: ${type}
+Access: (${octal}/${node.type === 'directory' ? 'd' : '-'}${perms})  
+Uid: (${node.owner || 'root'})   Gid: (${node.group || 'root'
